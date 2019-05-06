@@ -1,12 +1,13 @@
 import os
 import re
 from random import randint
+from  decimal import *
 
 path = "samples/"
 flag_spam = "spam"
 flag_nonspam = "nonspam"
 
-cross_check_index = 5   # how many 
+cross_check_index = 50   # how many 
 
 words_map = {}
 
@@ -51,15 +52,21 @@ def CheckSingleFile(nOfRandomWords, fileIndex):
     with open(file_paths[fileIndex], 'r', errors="ignore") as f:
         data = f.read()
         allwords = re.findall(r"\b[a-zA-Z0-9$'\"]+", data)
+    n_of_indexes = nOfRandomWords
+    if nOfRandomWords > len(allwords): n_of_indexes = len(allwords)
     for i in range(0, nOfRandomWords):
         hasCopy = True
-        while hasCopy:
-            index = randint(0, len(allwords))
-            if index not in word_indexes:
-                word_indexes.append(index)
-                hasCopy = False
+        if n_of_indexes == len(allwords):
+            for x in range(0, n_of_indexes):
+                word_indexes.append(x)
+        else:
+            while hasCopy:
+                index = randint(0, n_of_indexes)
+                if index not in word_indexes:
+                    word_indexes.append(index)
+                    hasCopy = False
     wordChanceOfBeingSpam = [] # P(S|W) = P(W|S) / (P(W|S) + P(W|H))
-    for i in range(0, nOfRandomWords):
+    for i in range(0, n_of_indexes):
         try:
             word_in_check = words_map[allwords[i]]
         except KeyError:
@@ -70,19 +77,21 @@ def CheckSingleFile(nOfRandomWords, fileIndex):
         wordChanceOfBeingSpam.append(wordIsSpam / (wordIsSpam + wordIsNotSpam))
 
     # p = p1 * p2...pn / ( p1 * p2...pn + (1 - p1) * (1 - p2)...(1 - pn) )
-    p_up = 1
+    p_up = Decimal(1)
     # p_down1 is the same as p_up
-    p_down2 = 1
+    p_down2 = Decimal(1)
     for x in wordChanceOfBeingSpam: 
-        p_up *= x
-        p_down2 *= (1 - x)
-    return p_up / (p_up + p_down2)
+        p_up *= Decimal(x)
+        p_down2 *= Decimal((1 - x))
+    try:
+        return Decimal(p_up / (p_up + p_down2))
+    except InvalidOperation:
+        # usually when values are small so it is almost like division by zero
+        return 0
 
 
-LoadWordsWithChecks(5, True)
-print(CheckSingleFile(20, 5))
-chance_of_being_spam = CheckSingleFile(20, 6)
-chance_of_being_spam = CheckSingleFile(20, 7)
-chance_of_being_spam = CheckSingleFile(20, 8)
-chance_of_being_spam = CheckSingleFile(20, 9)
+
+LoadWordsWithChecks(10, True)
+for i in range(10, cross_check_index):
+    print(CheckSingleFile(5, i))
 print("a")
