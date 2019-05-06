@@ -8,13 +8,14 @@ flag_spam = "spam"
 flag_nonspam = "nonspam"
 
 cross_check_index = 50   # how many 
+n_of_words_to_check = 10
 
 words_map = {}
 
 are_paths_registered = False
 file_paths = []
 
-def LoadWordsWithChecks(indexToStartFrom=0, ignoreForCrossCheck=False):
+def LoadWordsWithChecks(validationStartIndex=0, ignoreForCrossCheck=False):
     global are_paths_registered
     valueToChange = "N/A"
     file_counter = 0
@@ -28,7 +29,7 @@ def LoadWordsWithChecks(indexToStartFrom=0, ignoreForCrossCheck=False):
         for data_file in files:
             file_path = os.path.join(root, data_file)
             if not are_paths_registered: file_paths.append(file_path)
-            if (not ignoreForCrossCheck) or (file_counter < indexToStartFrom or file_counter >= indexToStartFrom + cross_check_index):
+            if (not ignoreForCrossCheck) or (file_counter < validationStartIndex or file_counter >= validationStartIndex + cross_check_index):
                 print("Reading %s / %s (%s)" % (counter, total_files, root), end="\r")
                 with open(file_path, 'r', errors="ignore") as f:
                     data = f.read()
@@ -89,9 +90,33 @@ def CheckSingleFile(nOfRandomWords, fileIndex):
         # usually when values are small so it is almost like division by zero
         return 0
 
+def SetSampleFiles():
+    global file_paths
+    global are_paths_registered
+    if are_paths_registered: return
+    for root, dirs, files in os.walk(path):
+        for data_file in files:
+            file_paths.append(os.path.join(root, data_file))
+    are_paths_registered = True
+
+def DoCrossValidation():
+    #global file_paths
+    SetSampleFiles()
+    for start_i in range(0, len(file_paths), cross_check_index):
+        LoadWordsWithChecks(start_i, True)
+        checkResults = []
+        for file_i in range(start_i, start_i + cross_check_index):
+            ftype = file_paths[file_i].split('/')[1]
+            result = CheckSingleFile(n_of_words_to_check, file_i)
+            checkResults.append(
+                { "result": result, "type": ftype }
+            )
+        print("Files from %s to %s - done." % (start_i, start_i + cross_check_index - 1))
+        words_map.clear()
 
 
-LoadWordsWithChecks(10, True)
-for i in range(10, cross_check_index):
-    print(CheckSingleFile(5, i))
+
+
+
+DoCrossValidation()
 print("a")
