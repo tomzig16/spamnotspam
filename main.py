@@ -7,13 +7,15 @@ path = "samples/"
 flag_spam = "spam"
 flag_nonspam = "nonspam"
 
-cross_check_index = 50   # how many 
+cross_check_index = 250   # how many 
 n_of_words_to_check = 10
+spam_border = 0.7 # if more than this value -> spam, else -> not spam
 
 words_map = {}
 
 are_paths_registered = False
 file_paths = []
+checkResults = []
 
 def LoadWordsWithChecks(validationStartIndex=0, ignoreForCrossCheck=False):
     global are_paths_registered
@@ -101,19 +103,31 @@ def SetSampleFiles():
 
 def DoCrossValidation():
     #global file_paths
+    global checkResults
     SetSampleFiles()
+    try:
+        os.mkdir("res")
+    except FileExistsError:
+        pass
+    file = open("res/%sw_%s.txt" % (n_of_words_to_check, cross_check_index), "w") 
     for start_i in range(0, len(file_paths), cross_check_index):
         LoadWordsWithChecks(start_i, True)
-        checkResults = []
+        file.write("Samples from %s to %s\n" % (start_i, start_i + cross_check_index - 1))
         for file_i in range(start_i, start_i + cross_check_index):
             ftype = file_paths[file_i].split('/')[1]
             result = CheckSingleFile(n_of_words_to_check, file_i)
+            isSpam = "NotSpam"
+            if spam_border <= result:
+                isSpam = "Spam"
+            percentage = ("%s" % (round(result * 100, 6)))
+            file.write("%s%%,%s,%s,%s\n" % (percentage, file_paths[file_i], isSpam, result))
             checkResults.append(
-                { "result": result, "type": ftype }
+                { "percentage": percentage, "type": ftype, "verbalResult": isSpam, "result": result }
             )
         print("Files from %s to %s - done." % (start_i, start_i + cross_check_index - 1))
         words_map.clear()
-
+    file.close()
+        
 
 
 
