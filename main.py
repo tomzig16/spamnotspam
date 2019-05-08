@@ -7,9 +7,10 @@ path = "samples/"
 flag_spam = "spam"
 flag_nonspam = "nonspam"
 
-cross_check_index = 250   # how many 
-n_of_words_to_check = 10
-spam_border = 0.7 # if more than this value -> spam, else -> not spam
+cross_check_index = 10   # how many 
+n_of_words_to_check = 15
+spam_border = 0.6 # if more than this value -> spam, else -> not spam
+repeats = 10 # when using small amount of files to validate
 
 words_map = {}
 
@@ -71,13 +72,15 @@ def CheckSingleFile(nOfRandomWords, fileIndex):
     wordChanceOfBeingSpam = [] # P(S|W) = P(W|S) / (P(W|S) + P(W|H))
     for i in range(0, n_of_indexes):
         try:
-            word_in_check = words_map[allwords[i]]
+            word_in_check = words_map[allwords[word_indexes[i]]]
+            wordIsSpam      = word_in_check[flag_spam] / word_in_check["total"] # P(W|S)
+            wordIsNotSpam   = word_in_check[flag_nonspam] / word_in_check["total"] # P(W|H)
         except KeyError:
-            print("%s was not seen ever before... Treating the word as 0.5 (could be both, spam or not)" % (allwords[i]))
-            continue
-        wordIsSpam      = word_in_check[flag_spam] / word_in_check["total"] # P(W|S)
-        wordIsNotSpam   = word_in_check[flag_nonspam] / word_in_check["total"] # P(W|H)
-        wordChanceOfBeingSpam.append(wordIsSpam / (wordIsSpam + wordIsNotSpam))
+            wordIsSpam = 0.5
+            print("%s was not seen ever before... Treating the word as %s (could be both, spam or not)" % (allwords[i], wordIsSpam))
+            wordIsNotSpam = 1 - wordIsSpam
+        finally:
+            wordChanceOfBeingSpam.append(wordIsSpam / (wordIsSpam + wordIsNotSpam))
 
     # p = p1 * p2...pn / ( p1 * p2...pn + (1 - p1) * (1 - p2)...(1 - pn) )
     p_up = Decimal(1)
@@ -109,18 +112,20 @@ def DoCrossValidation():
         os.mkdir("res")
     except FileExistsError:
         pass
-    file = open("res/%sw_%s.txt" % (n_of_words_to_check, cross_check_index), "w") 
+    file = open("res/%sw_%s.csv" % (n_of_words_to_check, cross_check_index), "w") 
     for start_i in range(0, len(file_paths), cross_check_index):
         LoadWordsWithChecks(start_i, True)
-        file.write("Samples from %s to %s\n" % (start_i, start_i + cross_check_index - 1))
+        #file.write("Samples from %s to %s\n" % (start_i, start_i + cross_check_index - 1))
         for file_i in range(start_i, start_i + cross_check_index):
+            if file_i >= len(file_paths):
+                break
             ftype = file_paths[file_i].split('/')[1]
             result = CheckSingleFile(n_of_words_to_check, file_i)
             isSpam = "NotSpam"
             if spam_border <= result:
                 isSpam = "Spam"
             percentage = ("%s" % (round(result * 100, 6)))
-            file.write("%s%%,%s,%s,%s\n" % (percentage, file_paths[file_i], isSpam, result))
+            file.write("%s,%s%%,%s,%s\n" % (file_paths[file_i], percentage, isSpam, result))
             checkResults.append(
                 { "percentage": percentage, "type": ftype, "verbalResult": isSpam, "result": result }
             )
@@ -128,7 +133,6 @@ def DoCrossValidation():
         words_map.clear()
     file.close()
         
-
 
 
 
