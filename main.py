@@ -7,9 +7,9 @@ path = "samples/"
 flag_spam = "spam"
 flag_nonspam = "nonspam"
 
-cross_check_index = 10   # how many 
+cross_check_index = 300   # how many 
 n_of_words_to_check = 15
-spam_border = 0.6 # if more than this value -> spam, else -> not spam
+spam_border = 0.3 # if more than this value -> spam, else -> not spam
 repeats = 10 # when using small amount of files to validate
 
 words_map = {}
@@ -137,4 +137,3 @@ def DoCrossValidation():
 
 
 DoCrossValidation()
-print("a")
